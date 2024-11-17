@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Reminder System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: #f0f2f5;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+
+        .form-section {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .calendar-section {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        select, input, button {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 10px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        .calendar {
+            width: 100%;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .calendar-nav {
+            display: flex;
+            gap: 10px;
+        }
+
+        .calendar-nav button {
+            width: auto;
+            padding: 5px 15px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+
+        .calendar-day {
+            padding: 10px;
+            text-align: center;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .calendar-day.header {
+            background: #e9ecef;
+            font-weight: bold;
+        }
+
+        .calendar-day.has-reminder {
+            background: #d4edda;
+            cursor: pointer;
+        }
+
+        .reminder-list {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .reminder-item {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #locationField {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="nav">
+                <div class="logo">Document Reminder System</div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="main-content">
+            <div class="form-section">
+                <h2>Add New Document</h2>
+                <form id="documentForm">
+                    <div class="form-group">
+                        <label for="documentType">Document Type:</label>
+                        <select id="documentType" required>
+                            <option value="">Select document type</option>
+                            <option value="id">Carte de identitate</option>
+                            <option value="driving">Permis de conducere</option>
+                            <option value="other">Altele</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="expiryDate">Expiry Date:</label>
+                        <input type="date" id="expiryDate" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Need to go somewhere?</label>
+                        <select id="needLocation" required>
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group hidden" id="locationField">
+                        <label>Location:</label>
+                        <select id="location">
+                            <option value="population">Cel mai apropiat centru de evidență a populației</option>
+                            <option value="drpciv">DRPCIV</option>
+                            <option value="unknown">Nu sunt sigur/ă</option>
+                        </select>
+                    </div>
+
+                    <button type="submit">Add Document</button>
+                </form>
+            </div>
+
+            <div class="calendar-section">
+                <div class="calendar">
+                    <div class="calendar-header">
+                        <h2 id="currentMonth"></h2>
+                        <div class="calendar-nav">
+                            <button id="prevMonth">&lt; Previous</button>
+                            <button id="nextMonth">Next &gt;</button>
+                        </div>
+                    </div>
+                    <div class="calendar-grid" id="calendarGrid"></div>
+                </div>
+                <div class="reminder-list" id="reminderList">
+                    <h3>Upcoming Expirations</h3>
+                    <!-- Reminders will be dynamically added here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulated database
+        let documents = JSON.parse(localStorage.getItem('documents') || '[]');
+
+        // Calendar functionality
+        let currentDate = new Date();
+        let currentMonth = currentDate.getMonth();
+        let currentYear = currentDate.getFullYear();
+
+        function updateCalendar() {
+            const monthNames = ["January", "February", "March", "April", "May", "June",
+                              "July", "August", "September", "October", "November", "December"];
+
+            document.getElementById('currentMonth').textContent = `${monthNames[currentMonth]} ${currentYear}`;
+
+            const firstDay = new Date(currentYear, currentMonth, 1);
+            const lastDay = new Date(currentYear, currentMonth + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startingDay = firstDay.getDay();
+
+            const calendarGrid = document.getElementById('calendarGrid');
+            calendarGrid.innerHTML = '';
+
+            // Add day headers
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            days.forEach(day => {
+                const dayElement = document.createElement('div');
+                dayElement.classList.add('calendar-day', 'header');
+                dayElement.textContent = day;
+                calendarGrid.appendChild(dayElement);
+            });
+
+            // Add empty cells for days before the first of the month
+            for (let i = 0; i < startingDay; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.classList.add('calendar-day');
+                calendarGrid.appendChild(emptyDay);
+            }
+
+            // Add days of the month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayElement = document.createElement('div');
+                dayElement.classList.add('calendar-day');
+                dayElement.textContent = day;
+
+                // Check if there are any documents expiring on this day
+                const currentDate = new Date(currentYear, currentMonth, day);
+                const hasReminder = documents.some(doc => {
+                    const expiry = new Date(doc.expiryDate);
+                    return expiry.toDateString() === currentDate.toDateString();
+                });
+
+                if (hasReminder) {
+                    dayElement.classList.add('has-reminder');
+                    dayElement.addEventListener('click', () => showReminders(currentDate));
+                }
+
+                calendarGrid.appendChild(dayElement);
+            }
+        }
+
+        function showReminders(date) {
+            const reminderList = document.getElementById('reminderList');
+            const reminders = documents.filter(doc => {
+                const expiry = new Date(doc.expiryDate);
+                return expiry.toDateString() === date.toDateString();
+            });
+
+            let html = '<h3>Expirations for ' + date.toDateString() + '</h3>';
+            reminders.forEach(doc => {
+                html += `
+                    <div class="reminder-item">
+                        <p><strong>${doc.documentType}</strong></p>
+                        <p>Expires: ${new Date(doc.expiryDate).toLocaleDateString()}</p>
+                        ${doc.needLocation === 'yes' ? `<p>Location: ${doc.location}</p>` : ''}
+                    </div>
+                `;
+            });
+
+            reminderList.innerHTML = html;
+        }
+
+        // Event Listeners
+        document.getElementById('prevMonth').addEventListener('click', () => {
+            currentMonth--;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            updateCalendar();
+        });
+
+        document.getElementById('nextMonth').addEventListener('click', () => {
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            updateCalendar();
+        });
+
+        document.getElementById('needLocation').addEventListener('change', (e) => {
+            const locationField = document.getElementById('locationField');
+            if (e.target.value === 'yes') {
+                locationField.classList.remove('hidden');
+            } else {
+                locationField.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('documentType').addEventListener('change', (e) => {
+            const location = document.getElementById('location');
+            if (e.target.value === 'id') {
+                location.value = 'population';
+            } else if (e.target.value === 'driving') {
+                location.value = 'drpciv';
+            }
+        });
+
+        document.getElementById('documentForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const newDocument = {
+                documentType: document.getElementById('documentType').value,
+                expiryDate: document.getElementById('expiryDate').value,
+                needLocation: document.getElementById('needLocation').value,
+                location: document.getElementById('needLocation').value === 'yes' ?
+                         document.getElementById('location').value : null
+            };
+
+            documents.push(newDocument);
+            localStorage.setItem('documents', JSON.stringify(documents));
+
+            updateCalendar();
+            e.target.reset();
+
+            // Show success message
+            alert('Document added successfully!');
+        });
+
+        // Initialize calendar
+        updateCalendar();
+    </script>
+</body>
+</html>
